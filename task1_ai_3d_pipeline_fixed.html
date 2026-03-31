@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NexEra — AI 3D Asset Pipeline</title>
+
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0c12;
+      --panel: #111520;
+      --border: #1e2535;
+      --accent: #00e5ff;
+      --text: #e8edf5;
+      --muted: #5a6480;
+      --success: #00e5a0;
+      --radius: 12px;
+      --font-main: 'Syne', sans-serif;
+      --font-mono: 'IBM Plex Mono', monospace;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: var(--font-main);
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── HEADER ── */
+    header {
+      position: relative;
+      z-index: 10;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10,12,18,0.95);
+      backdrop-filter: blur(12px);
+      flex-shrink: 0;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%,100% { opacity:1; transform:scale(1); }
+      50% { opacity:0.5; transform:scale(0.8); }
+    }
+
+    .badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent);
+      border: 1px solid rgba(0,229,255,0.35);
+      border-radius: 20px;
+      padding: 4px 12px;
+      letter-spacing: 1px;
+    }
+
+    /* ── MAIN LAYOUT ── */
+    .app {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      height: calc(100vh - 52px);
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 340px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+      background: rgba(17,21,32,0.6);
+    }
+
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .section {
+      padding: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sec-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sec-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── TEXT INPUT ── */
+    .text-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-family: var(--font-main);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,229,255,0.1);
+    }
+
+    input[type="text"]::placeholder { color: var(--muted); }
+
+    /* ── BUTTONS ── */
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 10px;
+      font-family: var(--font-main);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.18s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+      width: 100%;
+      padding: 11px;
+    }
+
+    .btn-primary:hover { filter: brightness(1.15); }
+    .btn-primary:active { transform: scale(0.98); }
+
+    .btn-ghost {
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      border: 1px solid var(--border);
+      font-size: 12px;
+    }
+
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-ghost:active { transform: scale(0.96); }
+
+    /* ── QUICK PICKS ── */
+    .picks-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .chip {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 9px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      color: var(--text);
+      font-family: var(--font-main);
+      font-weight: 600;
+      user-select: none;
+    }
+
+    .chip:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,0.07); }
+    .chip:active { transform: scale(0.95); }
+
+    /* ── UPLOAD ──
+       Key fix: label wraps the hidden input, so clicking the label triggers the input. */
+    .upload-label {
+      display: block;
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .upload-label:hover {
+      border-color: var(--accent);
+      background: rgba(0,229,255,0.04);
+    }
+
+    .upload-icon { font-size: 26px; margin-bottom: 6px; }
+    .upload-hint { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+    /* Hidden — label click triggers it */
+    #imageInput { display: none; }
+
+    #imgPreview {
+      width: 100%;
+      max-height: 100px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-top: 10px;
+      display: none;
+      border: 1px solid var(--border);
+    }
+
+    /* ── CONTROLS ── */
+    .ctrl-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+    }
+
+    /* ── ASSET INFO ── */
+    .info-table { width: 100%; border-collapse: collapse; }
+    .info-table td { padding: 5px 0; font-size: 13px; vertical-align: middle; }
+    .info-table td:first-child {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 1px;
+      width: 80px;
+    }
+    .info-table td:last-child { font-weight: 600; }
+
+    .status-dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 6px var(--success);
+      margin-right: 5px;
+    }
+
+    /* ── AI SUMMARY ── */
+    .summary-box {
+      background: rgba(0,229,255,0.05);
+      border: 1px solid rgba(0,229,255,0.18);
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #b8c8d8;
+      min-height: 70px;
+    }
+
+    .ai-tag {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      color: var(--accent);
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .typing-cursor::after {
+      content: '▋';
+      color: var(--accent);
+      animation: blink 0.75s step-end infinite;
+    }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* ── VIEWER AREA ── */
+    .viewer-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 12px;
+      min-width: 0;   /* prevent flex overflow */
+    }
+
+    .viewer-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .asset-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .pill {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+    }
+
+    /* Catalog strip */
+    .catalog-strip {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      flex-shrink: 0;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+    .catalog-strip::-webkit-scrollbar { display: none; }
+
+    .cat-card {
+      flex: 0 0 88px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.18s;
+      font-size: 11px;
+      color: var(--muted);
+      user-select: none;
+    }
+
+    .cat-card:hover, .cat-card.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(0,229,255,0.07);
+    }
+
+    .cat-card .ci { font-size: 20px; margin-bottom: 4px; }
+    .cat-card .cn { font-weight: 700; font-size: 10px; }
+
+    /* ── MODEL VIEWER WRAPPER ──
+       CRITICAL: mv-wrap must have flex:1 + min-height:0
+       model-viewer must be width:100% height:100% inside it */
+    .mv-wrap {
+      flex: 1;
+      min-height: 0;      /* allows the child to shrink */
+      position: relative;
+    }
+
+    /* Viewer-area summary bar */
+    .viewer-summary {
+      flex-shrink: 0;
+      background: rgba(0,229,255,0.05);
+      border: 1px solid rgba(0,229,255,0.18);
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .vs-tag {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      color: var(--accent);
+      white-space: nowrap;
+      padding-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .viewer-summary p {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #b8c8d8;
+      margin: 0;
+    }
+
+    .typing-cursor-vs::after {
+      content: '▋';
+      color: var(--accent);
+      animation: blink 0.75s step-end infinite;
+    }
+
+    model-viewer {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      --poster-color: transparent;
+    }
+
+    /* Loading overlay */
+    .mv-overlay {
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      background: rgba(10,12,18,0.78);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      z-index: 5;
+      backdrop-filter: blur(4px);
+      transition: opacity 0.4s;
+      pointer-events: none;
+    }
+
+    .mv-overlay.hidden { opacity: 0; }
+
+    .big-spin {
+      width: 38px; height: 38px;
+      border: 3px solid rgba(0,229,255,0.15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.85s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .ov-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%) translateY(14px);
+      background: #1a2030;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 20px;
+      font-size: 13px;
+      opacity: 0;
+      transition: all 0.28s;
+      z-index: 999;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Responsive */
+    @media (max-width: 780px) {
+      html, body { overflow: auto; }
+      .app { flex-direction: column; height: auto; }
+      .sidebar { width: 100%; }
+      .viewer-area { height: 70vw; min-height: 300px; }
+      .mv-wrap { flex: none; height: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    NexEra
+  </div>
+  <span class="badge">TASK 01 · AI 3D PIPELINE</span>
+</header>
+
+<div class="app">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <div class="sidebar">
+
+    <!-- Text Prompt -->
+    <div class="section">
+      <div class="sec-label">Text Prompt</div>
+      <div class="text-row">
+        <input id="promptInput" type="text" placeholder="e.g. yellow hard hat" value="yellow hard hat" />
+      </div>
+      <button class="btn btn-primary" onclick="generateFromText()">
+        ✦ Generate + Summarise
+      </button>
+    </div>
+
+    <!-- Quick Picks -->
+    <div class="section">
+      <div class="sec-label">Quick Picks</div>
+      <div class="picks-grid">
+        <div class="chip" onclick="quickPick('hat')">🤖 Hat</div>
+        <div class="chip" onclick="quickPick('water bottle')">🥤💧 Water Bottle</div>
+        <div class="chip" onclick="quickPick('Engine')">⚙️🛠️ Engine</div>
+        <div class="chip" onclick="quickPick('lantern')">🏮 Lantern</div>
+      </div>
+    </div>
+
+    <!-- Image Upload — label wraps hidden input -->
+    <div class="section">
+      <div class="sec-label">Image Upload</div>
+      <label class="upload-label" for="imageInput">
+        <div class="upload-icon">📁</div>
+        <div class="upload-hint">
+          <strong>Click to browse</strong> or drop an image<br>
+          <span style="font-size:11px">Filename matched to a 3D model</span>
+        </div>
+      </label>
+      <input type="file" id="imageInput" accept="image/*" onchange="handleImageUpload(event)" />
+      <img id="imgPreview" alt="Uploaded preview" />
+    </div>
+
+    <!-- Controls -->
+    <div class="section">
+      <div class="sec-label">Viewer Controls</div>
+      <div class="ctrl-grid">
+        <button class="btn btn-ghost" onclick="orbit(-45)">← Orbit</button>
+        <button class="btn btn-ghost" onclick="resetView()">⟳ Reset</button>
+        <button class="btn btn-ghost" onclick="orbit(45)">Orbit →</button>
+      </div>
+      <div class="ctrl-grid" style="margin-top:6px">
+        <button class="btn btn-ghost" onclick="moveY(0.25)">▲ Up</button>
+        <button class="btn btn-ghost" onclick="toggleAuto()">⏸ Auto</button>
+        <button class="btn btn-ghost" onclick="moveY(-0.25)">▼ Down</button>
+      </div>
+    </div>
+
+    <!-- Asset Info -->
+    <div class="section">
+      <div class="sec-label">Asset Info</div>
+      <table class="info-table">
+        <tr><td>NAME</td><td id="infoName">Yellow Hard Hat</td></tr>
+        <tr><td>FORMAT</td><td>GLB / glTF</td></tr>
+        <tr><td>SOURCE</td><td id="infoSource">Text Prompt</td></tr>
+        <tr><td>STATUS</td><td><span class="status-dot"></span>Ready</td></tr>
+      </table>
+    </div>
+
+    <!-- AI Summary -->
+    <div class="section">
+      <div class="sec-label">AI Summary</div>
+      <div class="summary-box">
+        <span class="ai-tag">✦ AI · EDUCATIONAL CONTEXT</span>
+        <span id="summaryText">A hard hat is critical PPE worn on construction and industrial sites to protect workers from falling objects and impact injuries. It is mandatory on most active work sites and should always be inspected before use.</span>
+      </div>
+    </div>
+
+  </div><!-- /sidebar -->
+
+  <!-- ═══ VIEWER ═══ -->
+  <div class="viewer-area">
+
+    <div class="viewer-top">
+      <div class="asset-title" id="viewerTitle">Yellow Hard Hat</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="pill" id="modePill">GLB</span>
+        <span class="pill" id="autoLabel">Auto-Rotate ON</span>
+      </div>
+    </div>
+
+    <!-- Catalog strip -->
+    <div class="catalog-strip" id="catalogStrip"></div>
+
+    <!-- Main display: 3D model OR uploaded image -->
+    <div class="mv-wrap">
+
+      <!-- Loading overlay (3D only) -->
+      <div class="mv-overlay hidden" id="mvOverlay">
+        <div class="big-spin"></div>
+        <div class="ov-label">LOADING MODEL…</div>
+      </div>
+
+      <!-- 3D viewer -->
+      <model-viewer
+        id="viewer"
+        src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Hat/glTF-Binary/Hat.glb"
+        alt="3D model"
+        auto-rotate
+        camera-controls
+        shadow-intensity="1"
+        exposure="1.2"
+        environment-image="neutral"
+        camera-orbit="0deg 90deg 4m"
+        camera-target="0m 0m 0m"
+        field-of-view="45deg">
+      </model-viewer>
+
+      <!-- Image display (shown instead of 3D viewer when image is uploaded) -->
+      <div id="imageDisplay" style="
+        display:none; position:absolute; inset:0;
+        border-radius:16px; border:1px solid var(--border);
+        background:var(--panel);
+        align-items:center; justify-content:center; overflow:hidden;
+      ">
+        <img id="viewerImg" alt="Uploaded asset"
+          style="max-width:100%; max-height:100%; object-fit:contain; border-radius:12px;" />
+      </div>
+    </div>
+
+    <!-- Summary panel — always visible below viewer -->
+    <div class="viewer-summary" id="viewerSummary">
+      <span class="vs-tag">✦ AI · EDUCATIONAL SUMMARY</span>
+      <p id="viewerSummaryText">A hard hat is critical PPE worn on construction and industrial sites to protect workers from falling objects and impact injuries. It is mandatory on most active work sites.</p>
+    </div>
+
+  </div><!-- /viewer-area -->
+
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<script>
+// ─── CATALOG ─────────────────────────────────────────────────────────────────
+const CATALOG = [
+  {
+    id: "hat",
+    label: "Hat",
+    icon: "🤖",
+    tags: ["space helmet","astronaut","helmet","visor","nasa","space","suit","oxygen","EVA","spacewalk"],
+    glb:"https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb",
+    summary: "A space helmet is a pressurised protective enclosure worn by astronauts during extravehicular activity and launch operations. It supplies breathable oxygen, maintains internal pressure, and shields the wearer from micrometeoroids, extreme temperatures, and solar radiation. "
+  },
+  {
+    id: "Engine",
+    label: "Engine",
+    icon: "⚙️🛠️",
+    tags: ["engine","cylinder","motor","machine","mechanical","generator","compressor","pistons","machinery"],
+    glb: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/2CylinderEngine/glTF-Binary/2CylinderEngine.glb",
+    summary: "A two-cylinder engine is a compact internal combustion unit commonly found in generators, compressors, and light machinery used across construction and maintenance sites."
+  },
+  {
+    id: "WaterBottle",
+    label: "Water Bottle",
+    icon: "🥤💧",
+    tags: ["water bottle","bottle","water","hydration","drink","flask","container","canteen"],
+    glb: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/WaterBottle/glTF-Binary/WaterBottle.glb",
+    summary: "Hydration is a non-negotiable safety requirement on active work sites, particularly in high-heat or physically demanding environments. A sturdy water bottle encourages regular hydration breaks, which are essential for maintaining focus, preventing heat-related illnesses, and ensuring overall worker well-being during long shifts."
+  },
+  {
+    id: "lantern",
+    label: "Lantern",
+    icon: "🏮",
+    tags: ["lantern","portable light","area light","camp light"],
+    glb: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Lantern/glTF-Binary/Lantern.glb",
+    summary: "A portable lantern provides broad area lighting for field operations, inspections, and emergency response where fixed lighting is unavailable. Ideal for extended work sessions in low-light environments."
+  }
+];
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let orbitDeg    = 0;
+let targetY     = 0;
+let autoOn      = true;
+let activeId    = "hat";
+let typingTimer = null;
+
+const viewer    = document.getElementById('viewer');
+const imgDisplay = document.getElementById('imageDisplay');
+const viewerImg  = document.getElementById('viewerImg');
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+buildCatalog();
+
+// Hide the model-viewer overlay as soon as the hat loads on startup
+viewer.addEventListener('load', () => {
+  document.getElementById('mvOverlay').classList.add('hidden');
+}, { once: true });
+setTimeout(() => document.getElementById('mvOverlay').classList.add('hidden'), 7000);
+
+function buildCatalog() {
+  const strip = document.getElementById('catalogStrip');
+  strip.innerHTML = CATALOG.map(item => `
+    <div class="cat-card ${item.id === activeId ? 'active' : ''}"
+         id="cc-${item.id}"
+         onclick="loadItem('${item.id}','Catalog')">
+      <div class="ci">${item.icon}</div>
+      <div class="cn">${item.label}</div>
+    </div>
+  `).join('');
+}
+
+function highlightCatalog(id) {
+  document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('active'));
+  const el = document.getElementById('cc-' + id);
+  if (el) el.classList.add('active');
+}
+
+// ─── SWITCH BETWEEN 3D AND IMAGE MODES ───────────────────────────────────────
+function show3DMode() {
+  viewer.style.display = 'block';
+  imgDisplay.style.display = 'none';
+  document.getElementById('modePill').textContent = 'GLB';
+}
+
+function showImageMode(src) {
+  viewer.style.display = 'none';
+  imgDisplay.style.display = 'flex';
+  viewerImg.src = src;
+  document.getElementById('modePill').textContent = 'IMAGE';
+}
+
+// ─── FIND MODEL ───────────────────────────────────────────────────────────────
+function findModel(text) {
+  const q = (text || '').toLowerCase().trim();
+  let best = CATALOG[0], bestScore = -1;
+  for (const item of CATALOG) {
+    let score = 0;
+    for (const tag of item.tags) {
+      if (q === tag)              score += 100;
+      else if (q.includes(tag))   score += tag.length * 2;
+      else if (tag.includes(q))   score += q.length;
+    }
+    if (score > bestScore) { bestScore = score; best = item; }
+  }
+  return best;
+}
+
+// ─── LOAD ITEM (3D model) ─────────────────────────────────────────────────────
+function loadItem(id, source) {
+  const item = CATALOG.find(c => c.id === id) || CATALOG[0];
+  activeId = item.id;
+
+  // Switch to 3D mode
+  show3DMode();
+
+  // Update labels
+  document.getElementById('viewerTitle').textContent = item.label;
+  document.getElementById('infoName').textContent    = item.label;
+  document.getElementById('infoSource').textContent  = source;
+  document.getElementById('promptInput').value       = item.label.toLowerCase();
+  highlightCatalog(item.id);
+
+  // Show loading overlay
+  const overlay = document.getElementById('mvOverlay');
+  overlay.classList.remove('hidden');
+
+  // Swap the model
+  viewer.setAttribute('src', item.glb);
+  setTimeout(() => {
+  viewer.setAttribute('camera-orbit', '0deg 90deg 4m');
+  viewer.setAttribute('camera-target', '0m 0m 0m');
+}, 300);
+  function resetView() {
+  orbitDeg = 0;
+  targetY = 0;
+
+  viewer.setAttribute('camera-orbit', '0deg 90deg 4m');
+  viewer.setAttribute('camera-target', '0m 0m 0m');
+}
+
+  // Update both summaries
+  typeSummary(item.summary);
+
+  // Hide overlay when loaded or after timeout
+  const hideOverlay = () => overlay.classList.add('hidden');
+  viewer.addEventListener('load', hideOverlay, { once: true });
+  setTimeout(hideOverlay, 8000);
+
+  showToast('✓ Loaded: ' + item.label);
+}
+
+// ─── GENERATE FROM TEXT ───────────────────────────────────────────────────────
+function generateFromText() {
+  const val = document.getElementById('promptInput').value.trim();
+  if (!val) { showToast('⚠ Enter a description first'); return; }
+  const item = findModel(val);
+  loadItem(item.id, 'Text Prompt');
+}
+
+// ─── QUICK PICK ───────────────────────────────────────────────────────────────
+function quickPick(label) {
+  document.getElementById('promptInput').value = label;
+  generateFromText();
+}
+
+// ─── IMAGE UPLOAD — just display the image, no 3D model ──────────────────────
+function handleImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const objectURL = URL.createObjectURL(file);
+
+  // Show image in sidebar preview
+  const preview = document.getElementById('imgPreview');
+  preview.src = objectURL;
+  preview.style.display = 'block';
+
+  // Show image in the main viewer area
+  showImageMode(objectURL);
+
+  // Update UI labels
+  const displayName = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+  document.getElementById('viewerTitle').textContent = displayName;
+  document.getElementById('infoName').textContent    = displayName;
+  document.getElementById('infoSource').textContent  = 'Image Upload';
+
+  // Show a generic image summary
+  const imgSummary = `Uploaded image: "${file.name}". The image has been displayed in the viewer. Use the Text Prompt above to load a matching 3D model for this asset, or select one from the catalog.`;
+  typeSummary(imgSummary);
+
+  showToast('📁 Image displayed: ' + file.name);
+}
+
+// ─── TYPING ANIMATION (sidebar + viewer summary) ─────────────────────────────
+function typeSummary(text) {
+  // Sidebar summary
+  const sidebar = document.getElementById('summaryText');
+  // Viewer summary
+  const viewerS = document.getElementById('viewerSummaryText');
+
+  clearInterval(typingTimer);
+
+  // Set sidebar immediately
+  sidebar.textContent = text;
+
+  // Animate viewer summary
+  viewerS.textContent = '';
+  viewerS.classList.add('typing-cursor-vs');
+  let i = 0;
+  typingTimer = setInterval(() => {
+    viewerS.textContent += text[i++];
+    if (i >= text.length) {
+      clearInterval(typingTimer);
+      viewerS.classList.remove('typing-cursor-vs');
+    }
+  }, 14);
+}
+
+// ─── VIEWER CONTROLS ──────────────────────────────────────────────────────────
+function orbit(delta) {
+  orbitDeg += delta;
+  viewer.setAttribute('camera-orbit', `${orbitDeg}deg 75deg 2.5m`);
+}
+
+function moveY(delta) {
+  targetY += delta;
+  viewer.setAttribute('camera-target', `0m ${targetY}m 0m`);
+}
+
+function resetView() {
+  orbitDeg = 0; targetY = 0;
+  viewer.setAttribute('camera-orbit', '0deg 75deg 2.5m');
+  viewer.setAttribute('camera-target', '0m 0m 0m');
+}
+
+function toggleAuto() {
+  autoOn = !autoOn;
+  autoOn ? viewer.setAttribute('auto-rotate','') : viewer.removeAttribute('auto-rotate');
+  document.getElementById('autoLabel').textContent = autoOn ? 'Auto-Rotate ON' : 'Auto-Rotate OFF';
+  showToast(autoOn ? '⟳ Auto-rotate on' : '⏸ Auto-rotate off');
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+let _tt;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(_tt);
+  _tt = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// ─── KEYBOARD ─────────────────────────────────────────────────────────────────
+document.getElementById('promptInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') generateFromText();
+});
+
+// ─── DRAG & DROP ─────────────────────────────────────────────────────────────
+const uploadLabel = document.querySelector('.upload-label');
+uploadLabel.addEventListener('dragover', e => { e.preventDefault(); uploadLabel.style.borderColor = 'var(--accent)'; });
+uploadLabel.addEventListener('dragleave', () => uploadLabel.style.borderColor = '');
+uploadLabel.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadLabel.style.borderColor = '';
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    handleImageUpload({ target: { files: [file] } });
+  }
+});
+</script>
+</body>
+</html>
